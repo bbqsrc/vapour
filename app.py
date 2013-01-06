@@ -124,9 +124,11 @@ class LinksHandler(JSONMixin, tornado.web.RequestHandler):
 
     def get_html(self):
         self.write("""<!DOCTYPE html><html><head><meta
-        charset='utf-8'><title></title></head><body><form method='post'><input
-        name='url'><input name='desc'><input name='tags'><input
-        type='submit'></form><br><pre>""")
+        charset='utf-8'><title></title></head><body><form method='post'>
+        <input name='url' type='url' placeholder='URL'>
+        <input name='desc' placeholder='Description'><input name='tags'
+        placeholder='#tag1 #tag2 #etc'><br>
+        <input type='submit'></form><br><pre>""")
         self.get_json()
         self.write("</pre></body></html>")
 
