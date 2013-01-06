@@ -17,6 +17,7 @@ along with Vapour.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
 import json
+import re
 import uuid
 
 import pymongo
@@ -40,7 +41,11 @@ class Application(tornado.web.Application):
         return fix_id(record)
 
     def get_links_by_tag(self, tag):
-        records = self.collection.find({'tags': tag})
+        records = self.collection.find({'tags': re.compile(tag, re.I)})
+        return fix_ids(records)
+
+    def get_links_by_url(self, url):
+        records = self.collection.find({'url': re.compile(url, re.I)})
         return fix_ids(records)
 
     def insert_link(self, url, desc, tags):
@@ -135,11 +140,31 @@ class LinksHandler(JSONMixin, tornado.web.RequestHandler):
     def options(self): ...
 
 
+class URLQueryHandler(JSONMixin, tornado.web.RequestHandler):
+    def get_json(self, url=None):
+        if url is None:
+            return HTTPError(405)
+        records = self.application.get_links_by_url(url)
+        if records == []:
+            self.set_status(404)
+        self.write(dumps(records))
+
+    def get_html(self, url=None):
+        if url is None:
+            self.write("Search by URL (soon).")
+            return
+        
+        self.write("<pre>")
+        self.get_json(url)
+        self.write("</pre>")
+
 class QueryHandler(JSONMixin, tornado.web.RequestHandler):
     def post_json(self): ...
-    def get_json(self): ...
+    def get_json(self):
+        ...
 
-    def get_html(self): ...
+    def get_html(self):
+        self.get_json()
 
     def options(self): ...
 
@@ -158,14 +183,18 @@ if __name__ == "__main__":
         # Long forms
         (r"/tag/(.*)", TagHandler),
         (r"/query/(.*)", QueryHandler),
-        (r"/url/(.*)", LinkHandler),
-        (r"/url", LinksHandler),
+        (r"/links/(.*)", LinkHandler),
+        (r"/links", LinksHandler),
+        (r"/url/(.*)", URLQueryHandler),
+        (r"/url", URLQueryHandler),
 
         # Short forms
         (r"/t/(.*)", TagHandler),
         (r"/q/(.*)", QueryHandler),
-        (r"/u/(.*)", LinkHandler),
-        (r"/u", LinksHandler)
+        (r"/l/(.*)", LinkHandler),
+        (r"/l", LinksHandler),
+        (r"/u/(.*)", URLQueryHandler),
+        (r"/u", URLQueryHandler)
     ])
     application.listen(8888)
     tornado.ioloop.IOLoop.instance().start()
