@@ -23,6 +23,7 @@ import pymongo
 import tornado.options
 import tornado.web
 from bson.json_util import dumps
+from mako.lookup import TemplateLookup
 from pymongo import Connection
 from tornado.web import HTTPError, RequestHandler, StaticFileHandler
 
@@ -32,6 +33,7 @@ class Application(tornado.web.Application):
     def __init__(self, handlers, **settings):
         tornado.web.Application.__init__(self, handlers, **settings)
         self.collection = Connection().vapour.urls
+        self.templates = TemplateLookup(directories=["templates"])
 
     def get_link_by_id(self, id):
         record = self.collection.find_one({'_id': uuid.UUID(id)})
@@ -140,10 +142,15 @@ class QueryHandler(JSONMixin, tornado.web.RequestHandler):
     def options(self): ...
 
 
+class HomePageHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write(self.application.templates
+                .get_template("home.html").render())
+
 if __name__ == "__main__":
     tornado.options.parse_command_line()
     application = Application([
-        #(r"/", HomePageHandler),
+        (r"/", HomePageHandler),
         (r"/static/(.*)", StaticFileHandler, {"path": "static"}),
 
         # Long forms
